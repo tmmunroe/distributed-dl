@@ -225,14 +225,14 @@ def main():
 
         two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
         two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
-        two_gpu_results['speedup'] = 2*two_gpu_results['efficiency']
+        two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
         print(two_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
         four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
         four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
-        four_gpu_results['speedup'] = 4*four_gpu_results['efficiency']
+        four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
         print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
