@@ -27,7 +27,6 @@ def default_training_args():
         workers=2,
         learning_rate=0.1,
         momentum=0.9,
-        optimizer='sgd',
         epochs=1,
         batch_size=32
     )
@@ -150,34 +149,40 @@ def batch_size_generator():
         batch_size *= 4
 
 
-def increasing_batch_size(devices:list, batch_sizes:list=None):
+def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
     print(devices)
 
     args = default_training_args()
     args.epochs = 2
     args.devices = devices
 
-    if batch_sizes is None:
-        batch_sizes = batch_size_generator()
+    if batch_sizes_per_gpu is None:
+        print('Using unbounded batch size per gpu generator')
+        batch_sizes_per_gpu = batch_size_generator()
 
-    headers = ['gpus', 'batch_size', 'time', 'speedup']
+    headers = ['gpus', 'batch_size_per_gpu', 'time']
     epoch_table = []
-    for batch_size in batch_sizes:
-        print('BatchSize: ', batch_size)
+    for batch_size_per_gpu in batch_sizes_per_gpu:
+        try:
+            batch_size = batch_size_per_gpu*len(devices)
+            print('BatchSize: ', batch_size)
 
-        args.batch_size = batch_size
-        training_metrics = simple_training(args)
-        if len(training_metrics.epoch_metrics) != 2:
-            raise ValueError(f'Expected 2 epochs to be run.. but {len(epoch_metrics)} were run')
-        
-        epoch_metrics:EpochMetrics = training_metrics.epoch_metrics[-1]
-        
-        print('Epoch 2 Metrics:')
-        print(epoch_metrics)
-        print()
+            args.batch_size = batch_size
+            training_metrics = simple_training(args)
+            if len(training_metrics.epoch_metrics) != 2:
+                raise ValueError(f'Expected 2 epochs to be run.. but {len(epoch_metrics)} were run')
+            
+            epoch_metrics:EpochMetrics = training_metrics.epoch_metrics[-1]
+            
+            print('Epoch 2 Metrics:')
+            print(epoch_metrics)
+            print()
 
-        epoch_table.append((len(devices), args.batch_size, epoch_metrics.training_time, 1.0))
-        args.batch_size *= 4
+            epoch_table.append((len(devices), batch_size_per_gpu, epoch_metrics.training_time))
+            args.batch_size *= 4
+        except Exception as ex:
+            print(f'Failed at batch_size_per_gpu {batch_size_per_gpu} with error: ')
+            print(ex.with_traceback())
 
     return pd.DataFrame(epoch_table, columns=headers)
 
@@ -200,24 +205,28 @@ def main():
 
     if args.experiments:
         # one_gpu_results = increasing_batch_size(devices=[0])
-        one_gpu_results = increasing_batch_size(devices=[0], batch_sizes=[32, 128])
+        one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=None)
+        one_gpu_results['efficiency'] = 1.0
+        one_gpu_results['speedup'] = 1.0
         print(one_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
-        batch_sizes = list(one_gpu_results['batch_size'].unique())
-        print(f'Using batch sizes {batch_sizes} for multi gpus...')
+        batch_sizes_per_gpu = list(one_gpu_results['batch_size_per_gpu'].unique())
+        print(f'Using batch sizes per gpu {batch_sizes_per_gpu} for multi gpus...')
         print('--------------------------\n')
         print('--------------------------\n')
 
-        two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes=batch_sizes)
-        two_gpu_results['speedup'] =  one_gpu_results['time'] / two_gpu_results['time']
+        two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
+        two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
+        two_gpu_results['speedup'] = 2*two_gpu_results['efficiency']
         print(two_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
-        four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes=batch_sizes)
-        four_gpu_results['speedup'] = one_gpu_results['time'] / four_gpu_results['time']
+        four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
+        four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
+        four_gpu_results['speedup'] = 4*four_gpu_results['efficiency']
         print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
@@ -232,8 +241,8 @@ def main():
             workers=args.workers,
             learning_rate=args.lr,
             momentum=args.momentum,
-            optimizer=args.optimizer,
-            epochs=args.epochs
+            epochs=args.epochs,
+            batch_size=32
         )
         
         training_metrics = simple_training(training_args)

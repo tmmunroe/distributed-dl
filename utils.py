@@ -2,13 +2,12 @@
 
 
 class TrainingArgs:
-    def __init__(self, devices, datapath, workers, learning_rate, momentum, optimizer, epochs, batch_size):
+    def __init__(self, devices, datapath, workers, learning_rate, momentum, epochs, batch_size):
         self.devices = devices
         self.datapath = datapath
         self.workers = workers
         self.learning_rate = learning_rate
         self.momentum = momentum
-        self.optimizer = optimizer
         self.epochs = epochs
         self.batch_size = batch_size
     
@@ -19,7 +18,6 @@ class TrainingArgs:
         print('Workers: ', self.workers)
         print('LearningRate: ', self.learning_rate)
         print('Momentum: ', self.momentum)
-        print('Optimizer: ', self.optimizer)
         print('Epochs: ', self.epochs)
         print('BatchSize: ', self.batch_size)
 
