@@ -183,6 +183,7 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
         except Exception as ex:
             print(f'Failed at batch_size_per_gpu {batch_size_per_gpu} with error: ')
             print(str(ex))
+            break
 
     return pd.DataFrame(epoch_table, columns=headers)
 
