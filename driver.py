@@ -7,6 +7,7 @@ import pandas as pd
 import math
 
 import torch
+import torch.cuda
 import torch.nn as nn
 import torch.optim as optim
 
@@ -163,11 +164,15 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
     headers = ['gpus', 'batch_size_per_gpu', 'time']
     epoch_table = []
     for batch_size_per_gpu in batch_sizes_per_gpu:
+        # release cuda memory for next batch_size experiment
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
         try:
             batch_size = batch_size_per_gpu*len(devices)
             print('BatchSize: ', batch_size)
 
-            args.batch_size = batch_size
+            args.batch_size = int(batch_size)
             training_metrics = simple_training(args)
             if len(training_metrics.epoch_metrics) != 2:
                 raise ValueError(f'Expected 2 epochs to be run.. but {len(epoch_metrics)} were run')
