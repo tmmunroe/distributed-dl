@@ -170,7 +170,7 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
 
         try:
             batch_size = batch_size_per_gpu*len(devices)
-            print('BatchSize: ', batch_size)
+            print('BatchSize: ', batch_size, '... BatchSizePerGpu: ', batch_size_per_gpu)
 
             args.batch_size = int(batch_size)
             training_metrics = simple_training(args)
