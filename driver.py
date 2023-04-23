@@ -115,7 +115,7 @@ def simple_training(args: TrainingArgs) -> TrainingMetrics:
     dataset_init_elapsed = time.perf_counter() - start_init
     print('Time creating dataset object: ', dataset_init_elapsed)
 
-    train_dataloader = DataLoader(training_data, batch_size=128, shuffle=True, num_workers=args.workers)
+    train_dataloader = DataLoader(training_data, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
                'dog', 'frog', 'horse', 'ship', 'truck')
