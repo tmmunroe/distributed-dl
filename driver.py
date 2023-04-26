@@ -213,7 +213,7 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
     return pd.DataFrame(epoch_table, columns=headers)
 
 
-def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
+def train_batch_size_simple(batch_size_per_gpu:int, devices:list, epochs:int):
     #Q4.1
     args = default_training_args()
     args.epochs = epochs
@@ -225,6 +225,33 @@ def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
     epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
     epoch_table = [
         (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1, epoch.training_time,epoch.acc, epoch.loss)
+    ]
+    return pd.DataFrame(epoch_table, columns=headers)
+
+
+
+def train_batch_size_with_remedies(batch_size_per_gpu:int, devices:list, epochs:int):
+    #Q4.2
+    args = default_training_args()
+    base_batch_size = args.batch_size
+
+    args.epochs = epochs
+    args.devices = devices
+    args.batch_size = int(batch_size_per_gpu*len(devices))
+
+    # remedy 1
+    learning_rate_scale = args.batch_size / base_batch_size
+    args.learning_rate *= learning_rate_scale
+
+    # remedy 2 TODO
+    #
+    #
+    
+    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'learning_rate', 'time', 'accuracy', 'loss']
+    training_metrics, _ = simple_training(args)
+    epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
+    epoch_table = [
+        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1, args.learning_rate, epoch.training_time,epoch.acc, epoch.loss)
     ]
     return pd.DataFrame(epoch_table, columns=headers)
 
@@ -280,7 +307,7 @@ def main():
         print('--------------------------\n')
 
         max_batch_size_per_gpu = max(batch_sizes_per_gpu)
-        large_batch_training = train_batch_size(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
+        large_batch_training = train_batch_size_simple(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
         print('Large Batch Training Results:')
         print(large_batch_training)
         print('--------------------------\n')
