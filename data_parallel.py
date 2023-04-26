@@ -23,11 +23,11 @@ class DataParallelMetrics:
 
 class DataParallelWithMetrics(DataParallel):
     def __init__(self, module, device_ids=None, output_device=None, dim=0):
-        super().__init__(module, device_ids=None, output_device=None, dim=0)
+        super().__init__(module, device_ids=device_ids, output_device=output_device, dim=dim)
         self.metrics = []
     
     def start_new_metrics(self):        
-        self.metrics.append(DataParallelWithMetrics())
+        self.metrics.append(DataParallelMetrics())
 
     def forward(self, *inputs, **kwargs):
         with torch.autograd.profiler.record_function("DataParallel.forward"):

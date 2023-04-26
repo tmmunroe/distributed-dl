@@ -122,7 +122,9 @@ def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWi
                'dog', 'frog', 'horse', 'ship', 'truck')
     
     # Create ResNet=18 Model and training parameters
-    nn_model = DataParallelWithMetrics(resnet18(), device_ids=args.devices)
+    nn_model = resnet18()
+    if len(args.devices) > 1:
+        nn_model = DataParallelWithMetrics(nn_model, device_ids=args.devices)
     nn_model.to(device)
 
     loss_func = nn.CrossEntropyLoss()
@@ -137,7 +139,9 @@ def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWi
     for epoch in range(args.epochs):
         print(f"Epoch: {epoch+1} of {args.epochs}")
 
-        nn_model.start_new_metrics() # to track more precise times internally for communication and training
+        if hasattr(nn_model, 'start_new_metrics'):
+            nn_model.start_new_metrics() # to track more precise times internally for communication and training
+
         epoch_metrics = train(nn_model, optimizer, loss_func, train_dataloader, device)
         epoch_metrics.epoch = epoch+1
         training_metrics.add_epoch_metrics(epoch_metrics)
@@ -151,7 +155,7 @@ def batch_size_generator():
         batch_size *= 4
 
 def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
-    #Q1, Q2
+    #Q1, Q2, Q3.1
     print(devices)
 
     args = default_training_args()
@@ -177,17 +181,29 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
             training_metrics, nn_model = simple_training(args)
             if len(training_metrics.epoch_metrics) != 2:
                 raise ValueError(f'Expected 2 epochs to be run.. but {len(epoch_metrics)} were run')
-            if len(nn_model.metrics) != len(training_metrics.epoch_metrics):
+            if len(devices) > 1 and len(nn_model.metrics) != len(training_metrics.epoch_metrics):
                 raise ValueError(f'Expected metrics for 2 epochs to be in nn_model.metrics.. but {len(nn_model.metrics)} were there')
 
             epoch_metrics:EpochMetrics = training_metrics.epoch_metrics[-1]
-            data_parallel_metrics:DataParallelMetrics = nn_model.metrics[-1]
+
+            if len(devices) > 1:
+                data_parallel_metrics:DataParallelMetrics = nn_model.metrics[-1]
+            else:
+                data_parallel_metrics = DataParallelMetrics() # all zeroes
             
             print('Epoch 2 Metrics:')
             print(epoch_metrics)
             print()
 
-            epoch_table.append((len(devices), batch_size_per_gpu, epoch_metrics.training_time))
+            epoch_table.append((
+                len(devices),
+                batch_size_per_gpu,
+                epoch_metrics.training_time,
+                data_parallel_metrics.training_time,
+                data_parallel_metrics.replicate_time,
+                data_parallel_metrics.scatter_time,
+                data_parallel_metrics.gather_time
+            ))
             args.batch_size *= 4
         except Exception as ex:
             print(f'Failed at batch_size_per_gpu {batch_size_per_gpu} with error: ')
@@ -202,14 +218,15 @@ def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
     args = default_training_args()
     args.epochs = epochs
     args.devices = devices
-    args.batch_size = batch_size_per_gpu*len(devices)
+    args.batch_size = int(batch_size_per_gpu*len(devices))
 
-    headers = ['gpus', 'batch_size_per_gpu', 'time', 'accuracy', 'loss']
+    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'time', 'accuracy', 'loss']
     training_metrics, _ = simple_training(args)
     epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
-    return [
-        (len(args.devices), batch_size_per_gpu, epoch.training_time,epoch.acc, epoch.loss)
+    epoch_table = [
+        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1, epoch.training_time,epoch.acc, epoch.loss)
     ]
+    return pd.DataFrame(epoch_table, columns=headers)
 
 
 def main():
@@ -233,6 +250,8 @@ def main():
         one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=None)
         one_gpu_results['efficiency'] = 1.0
         one_gpu_results['speedup'] = 1.0
+        one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
+        one_gpu_results['computation_time'] = one_gpu_results['time'] - one_gpu_results['communication_time']
         print(one_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
@@ -245,6 +264,8 @@ def main():
         two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
         two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
         two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
+        two_gpu_results['communication_time'] = two_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
+        two_gpu_results['computation_time'] = two_gpu_results['time'] - two_gpu_results['communication_time']
         print(two_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
@@ -252,10 +273,18 @@ def main():
         four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
         four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
         four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
+        four_gpu_results['communication_time'] = four_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
+        four_gpu_results['computation_time'] = four_gpu_results['time'] - four_gpu_results['communication_time']
         print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
+        max_batch_size_per_gpu = max(batch_sizes_per_gpu)
+        large_batch_training = train_batch_size(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
+        print('Large Batch Training Results:')
+        print(large_batch_training)
+        print('--------------------------\n')
+        print('--------------------------\n')
 
     else:
         print(f'Running Ad Hoc Training...')
