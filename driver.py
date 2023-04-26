@@ -3,6 +3,7 @@ import time
 from collections import namedtuple
 from tabulate import tabulate
 import pandas as pd
+from typing import Tuple
 
 import math
 
@@ -15,8 +16,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
 from torch.utils.data.dataloader import DataLoader
-from torch.nn import DataParallel
-from torch.nn.parallel import DistributedDataParallel
+from data_parallel import DataParallelWithMetrics, DataParallelMetrics
 from torchvision.models import resnet18
 
 from utils import TrainingArgs, TrainingMetrics, EpochMetrics
@@ -95,7 +95,7 @@ def train(nn_model, optimizer, loss_func, dataloader, device, print_batch_values
     return EpochMetrics(dataloading_time, training_time, total_time, train_loss/(batch+1), correct/total)
 
 
-def simple_training(args: TrainingArgs) -> TrainingMetrics:
+def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWithMetrics]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Define Data transformer
@@ -122,7 +122,7 @@ def simple_training(args: TrainingArgs) -> TrainingMetrics:
                'dog', 'frog', 'horse', 'ship', 'truck')
     
     # Create ResNet=18 Model and training parameters
-    nn_model = DataParallel(resnet18(), device_ids=args.devices)
+    nn_model = DataParallelWithMetrics(resnet18(), device_ids=args.devices)
     nn_model.to(device)
 
     loss_func = nn.CrossEntropyLoss()
@@ -137,33 +137,18 @@ def simple_training(args: TrainingArgs) -> TrainingMetrics:
     for epoch in range(args.epochs):
         print(f"Epoch: {epoch+1} of {args.epochs}")
 
+        nn_model.start_new_metrics() # to track more precise times internally for communication and training
         epoch_metrics = train(nn_model, optimizer, loss_func, train_dataloader, device)
         epoch_metrics.epoch = epoch+1
         training_metrics.add_epoch_metrics(epoch_metrics)
 
-    return training_metrics
+    return training_metrics, nn_model
 
 def batch_size_generator():
     batch_size = 32
     while True:
         yield batch_size
         batch_size *= 4
-
-
-def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
-    #Q4.1
-    args = default_training_args()
-    args.epochs = epochs
-    args.devices = devices
-    args.batch_size = batch_size_per_gpu*len(devices)
-
-    headers = ['gpus', 'batch_size_per_gpu', 'time', 'accuracy', 'loss']
-    training_metrics = simple_training(args)
-    epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
-    return [
-        (len(args.devices), batch_size_per_gpu, epoch.training_time,epoch.acc, epoch.loss)
-    ]
-
 
 def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
     #Q1, Q2
@@ -177,7 +162,7 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
         print('Using unbounded batch size per gpu generator')
         batch_sizes_per_gpu = batch_size_generator()
 
-    headers = ['gpus', 'batch_size_per_gpu', 'time']
+    headers = ['gpus', 'batch_size_per_gpu', 'time', 'parallel_apply', 'replicate', 'scatter', 'gather']
     epoch_table = []
     for batch_size_per_gpu in batch_sizes_per_gpu:
         # release cuda memory for next batch_size experiment
@@ -189,11 +174,14 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
             print('BatchSize: ', batch_size, '... BatchSizePerGpu: ', batch_size_per_gpu)
 
             args.batch_size = int(batch_size)
-            training_metrics = simple_training(args)
+            training_metrics, nn_model = simple_training(args)
             if len(training_metrics.epoch_metrics) != 2:
                 raise ValueError(f'Expected 2 epochs to be run.. but {len(epoch_metrics)} were run')
-            
+            if len(nn_model.metrics) != len(training_metrics.epoch_metrics):
+                raise ValueError(f'Expected metrics for 2 epochs to be in nn_model.metrics.. but {len(nn_model.metrics)} were there')
+
             epoch_metrics:EpochMetrics = training_metrics.epoch_metrics[-1]
+            data_parallel_metrics:DataParallelMetrics = nn_model.metrics[-1]
             
             print('Epoch 2 Metrics:')
             print(epoch_metrics)
@@ -207,6 +195,21 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
             break
 
     return pd.DataFrame(epoch_table, columns=headers)
+
+
+def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
+    #Q4.1
+    args = default_training_args()
+    args.epochs = epochs
+    args.devices = devices
+    args.batch_size = batch_size_per_gpu*len(devices)
+
+    headers = ['gpus', 'batch_size_per_gpu', 'time', 'accuracy', 'loss']
+    training_metrics, _ = simple_training(args)
+    epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
+    return [
+        (len(args.devices), batch_size_per_gpu, epoch.training_time,epoch.acc, epoch.loss)
+    ]
 
 
 def main():
@@ -267,7 +270,7 @@ def main():
             batch_size=32
         )
         
-        training_metrics = simple_training(training_args)
+        training_metrics, nn_model = simple_training(training_args)
         training_metrics.summarize()
 
 if __name__ == '__main__':
