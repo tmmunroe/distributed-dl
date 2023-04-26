@@ -150,7 +150,23 @@ def batch_size_generator():
         batch_size *= 4
 
 
+def train_batch_size(batch_size_per_gpu:int, devices:list, epochs:int):
+    #Q4.1
+    args = default_training_args()
+    args.epochs = epochs
+    args.devices = devices
+    args.batch_size = batch_size_per_gpu*len(devices)
+
+    headers = ['gpus', 'batch_size_per_gpu', 'time', 'accuracy', 'loss']
+    training_metrics = simple_training(args)
+    epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
+    return [
+        (len(args.devices), batch_size_per_gpu, epoch.training_time,epoch.acc, epoch.loss)
+    ]
+
+
 def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
+    #Q1, Q2
     print(devices)
 
     args = default_training_args()
