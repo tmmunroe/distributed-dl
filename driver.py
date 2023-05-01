@@ -29,7 +29,8 @@ def default_training_args():
         learning_rate=0.1,
         momentum=0.9,
         epochs=1,
-        batch_size=32
+        batch_size=32,
+        warmup_epochs=None
     )
 
 
@@ -239,11 +240,11 @@ def train_batch_size_with_remedies(batch_size_per_gpu:int, devices:list, epochs:
     args.devices = devices
     args.batch_size = int(batch_size_per_gpu*len(devices))
 
-    # remedy 1
+    # remedy 1 - linear scaling of learning rate with batch size
     learning_rate_scale = args.batch_size / base_batch_size
     args.learning_rate *= learning_rate_scale
 
-    # remedy 2 TODO
+    # remedy 2 - warm up
     #
     #
     
@@ -274,11 +275,12 @@ def main():
 
     if args.experiments:
         # one_gpu_results = increasing_batch_size(devices=[0])
-        one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=None)
-        one_gpu_results['efficiency'] = 1.0
-        one_gpu_results['speedup'] = 1.0
+        batch_sizes_per_gpu = None
+        one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=batch_sizes_per_gpu)
         one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         one_gpu_results['computation_time'] = one_gpu_results['time'] - one_gpu_results['communication_time']
+        one_gpu_results['efficiency'] = 1.0
+        one_gpu_results['speedup'] = 1.0
         print(one_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
@@ -289,19 +291,19 @@ def main():
         print('--------------------------\n')
 
         two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
-        two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
-        two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
         two_gpu_results['communication_time'] = two_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         two_gpu_results['computation_time'] = two_gpu_results['time'] - two_gpu_results['communication_time']
+        two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
+        two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
         print(two_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
         four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
-        four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
-        four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
         four_gpu_results['communication_time'] = four_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         four_gpu_results['computation_time'] = four_gpu_results['time'] - four_gpu_results['communication_time']
+        four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
+        four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
         print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
