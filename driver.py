@@ -28,6 +28,7 @@ def default_training_args():
         workers=2,
         learning_rate=0.1,
         momentum=0.9,
+        weight_decay=5e-4,
         epochs=1,
         batch_size=32,
         warmup_epochs=None
@@ -130,7 +131,7 @@ def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWi
 
     loss_func = nn.CrossEntropyLoss()
     optimizer = optim.SGD(nn_model.parameters(), lr=args.learning_rate,
-                          momentum=args.momentum, weight_decay=5e-4)
+                          momentum=args.momentum, weight_decay=args.weight_decay)
     lr_scheduler = None
     if args.warmup_epochs:
         lr_scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=1/3,
@@ -174,7 +175,7 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
         print('Using unbounded batch size per gpu generator')
         batch_sizes_per_gpu = batch_size_generator()
 
-    headers = ['gpus', 'batch_size_per_gpu', 'time', 'parallel_apply', 'replicate', 'scatter', 'gather']
+    headers = ['gpus', 'batch_size_per_gpu', 'total_batch_size', 'time', 'parallel_apply', 'replicate', 'scatter', 'gather']
     epoch_table = []
     for batch_size_per_gpu in batch_sizes_per_gpu:
         # release cuda memory for next batch_size experiment
@@ -206,13 +207,13 @@ def increasing_batch_size(devices:list, batch_sizes_per_gpu:list=None):
             epoch_table.append((
                 len(devices),
                 batch_size_per_gpu,
+                args.batch_size,
                 epoch_metrics.training_time,
                 data_parallel_metrics.training_time,
                 data_parallel_metrics.replicate_time,
                 data_parallel_metrics.scatter_time,
                 data_parallel_metrics.gather_time
             ))
-            args.batch_size *= 4
         except Exception as ex:
             print(f'Failed at batch_size_per_gpu {batch_size_per_gpu} with error: ')
             print(str(ex))
@@ -228,11 +229,12 @@ def train_batch_size_simple(batch_size_per_gpu:int, devices:list, epochs:int):
     args.devices = devices
     args.batch_size = int(batch_size_per_gpu*len(devices))
 
-    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'time', 'accuracy', 'loss']
+    headers = ['gpus', 'batch_size_per_gpu', 'total_batch_size', 'epoch', 
+               'time', 'accuracy', 'loss']
     training_metrics, _ = simple_training(args)
     epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
     epoch_table = [
-        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1, epoch.training_time,epoch.acc, epoch.loss)
+        (len(args.devices), batch_size_per_gpu, args.batch_size, len(training_metrics.epoch_metrics), epoch.training_time,epoch.acc, epoch.loss)
     ]
     return pd.DataFrame(epoch_table, columns=headers)
 
@@ -241,7 +243,7 @@ def train_batch_size_simple(batch_size_per_gpu:int, devices:list, epochs:int):
 def train_batch_size_with_remedies(batch_size_per_gpu:int, devices:list, epochs:int):
     #Q4.2
     args = default_training_args()
-    base_batch_size = args.batch_size
+    base_batch_size = 128 # because we are comparing to hw2
 
     args.epochs = epochs
     args.devices = devices
@@ -253,12 +255,18 @@ def train_batch_size_with_remedies(batch_size_per_gpu:int, devices:list, epochs:
 
     # remedy 2 - warm up
     args.warmup_epochs = 3
+
+
+    print('Scaling learning rate by: ', learning_rate_scale)
+    print('Using scaled learning rate: ', args.learning_rate)
+    print('Using warmup epochs: ', args.warmup_epochs)
     
-    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'warmup_epochs', 'learning_rate', 'time', 'accuracy', 'loss']
+    headers = ['gpus', 'batch_size_per_gpu', 'total_batch_size', 'epoch',
+               'warmup_epochs', 'learning_rate', 'time', 'accuracy', 'loss']
     training_metrics, _ = simple_training(args)
     epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
     epoch_table = [
-        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1,
+        (len(args.devices), batch_size_per_gpu, args.batch_size, len(training_metrics.epoch_metrics),
          args.warmup_epochs, args.learning_rate, epoch.training_time,epoch.acc, epoch.loss)
     ]
     return pd.DataFrame(epoch_table, columns=headers)
@@ -281,14 +289,15 @@ def main():
     args = parser.parse_args()
 
     if args.experiments:
-        # one_gpu_results = increasing_batch_size(devices=[0])
         batch_sizes_per_gpu = None
         one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=batch_sizes_per_gpu)
         one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         one_gpu_results['computation_time'] = one_gpu_results['time'] - one_gpu_results['communication_time']
         one_gpu_results['efficiency'] = 1.0
         one_gpu_results['speedup'] = 1.0
-        print(one_gpu_results)
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        print(tabulate(one_gpu_results[keep_cols], headers=keep_cols))
+        # print(one_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
@@ -302,7 +311,9 @@ def main():
         two_gpu_results['computation_time'] = two_gpu_results['time'] - two_gpu_results['communication_time']
         two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
         two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
-        print(two_gpu_results)
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        print(tabulate(two_gpu_results[keep_cols], headers=keep_cols))
+        # print(two_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
@@ -311,20 +322,23 @@ def main():
         four_gpu_results['computation_time'] = four_gpu_results['time'] - four_gpu_results['communication_time']
         four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
         four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
-        print(four_gpu_results)
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        print(tabulate(four_gpu_results[keep_cols], headers=keep_cols))
+        # print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
 
         max_batch_size_per_gpu = max(batch_sizes_per_gpu)
+
         large_batch_training = train_batch_size_simple(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
         print('Large Batch Training Results:')
         print(large_batch_training)
         print('--------------------------\n')
         print('--------------------------\n')
 
-        train_batch_size_with_remedies(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
+        remedies_training = train_batch_size_with_remedies(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
         print('Large Batch Training with Warmup and Linearly Scaled Learning Rate Results:')
-        print(large_batch_training)
+        print(remedies_training)
         print('--------------------------\n')
         print('--------------------------\n')
 
@@ -339,7 +353,8 @@ def main():
             learning_rate=args.lr,
             momentum=args.momentum,
             epochs=args.epochs,
-            batch_size=32
+            batch_size=32,
+            warmup_epochs=None
         )
         
         training_metrics, nn_model = simple_training(training_args)

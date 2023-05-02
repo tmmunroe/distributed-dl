@@ -1,6 +1,6 @@
 
 class TrainingArgs:
-    def __init__(self, devices, datapath, workers, learning_rate, momentum, epochs, batch_size, warmup_epochs):
+    def __init__(self, devices, datapath, workers, learning_rate, momentum, epochs, batch_size, warmup_epochs, weight_decay):
         self.devices = devices
         self.datapath = datapath
         self.workers = workers
@@ -9,6 +9,7 @@ class TrainingArgs:
         self.epochs = epochs
         self.batch_size = batch_size
         self.warmup_epochs = warmup_epochs
+        self.weight_decay = weight_decay
     
     def summarize(self):
         print('Training Args')
@@ -17,6 +18,7 @@ class TrainingArgs:
         print('Workers: ', self.workers)
         print('LearningRate: ', self.learning_rate)
         print('Momentum: ', self.momentum)
+        print('WeightDecay: ', self.weight_decay)
         print('Epochs: ', self.epochs)
         print('BatchSize: ', self.batch_size)
         print('WarmUpEpochs: ', self.warmup_epochs)

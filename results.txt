@@ -1,0 +1,209 @@
+[0]
+Using unbounded batch size per gpu generator
+BatchSize:  32 ... BatchSizePerGpu:  32
+Files already downloaded and verified
+Time creating dataset object:  0.8344932990003144
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 3.3942902829958257, Training Time: 34.83169652100332, Total Time: 38.26424202599992, Loss: 1.6541335323582524, Acc: 0.39906
+
+BatchSize:  128 ... BatchSizePerGpu:  128
+Files already downloaded and verified
+Time creating dataset object:  0.8157235199996649
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 8.608343273997889, Training Time: 13.611809338989588, Total Time: 22.25654293000025, Loss: 1.506319444702596, Acc: 0.44608
+
+BatchSize:  512 ... BatchSizePerGpu:  512
+Files already downloaded and verified
+Time creating dataset object:  0.8192817210001522
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 10.068860289008626, Training Time: 7.485648115999538, Total Time: 17.592323412999576, Loss: 1.6809449484854033, Acc: 0.36974
+
+BatchSize:  2048 ... BatchSizePerGpu:  2048
+Files already downloaded and verified
+Time creating dataset object:  0.8085298919995694
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 9.379302000997086, Training Time: 8.421412075001172, Total Time: 17.837511528000505, Loss: 1.7666159318043635, Acc: 0.34322
+
+BatchSize:  8192 ... BatchSizePerGpu:  8192
+Files already downloaded and verified
+Time creating dataset object:  0.8168398349998824
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 12.83457811399876, Training Time: 8.53575421700043, Total Time: 21.419435691000217, Loss: 3.5122082233428955, Acc: 0.2248
+
+BatchSize:  32768 ... BatchSizePerGpu:  32768
+Files already downloaded and verified
+Time creating dataset object:  0.8172495329999947
+Epoch: 1 of 2
+Failed at batch_size_per_gpu 32768 with error: 
+CUDA out of memory. Tried to allocate 128.00 MiB (GPU 0; 14.56 GiB total capacity; 13.01 GiB already allocated; 106.44 MiB free; 13.41 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+      gpus    batch_size_per_gpu      time    communication_time    computation_time    efficiency    speedup
+--  ------  --------------------  --------  --------------------  ------------------  ------------  ---------
+ 0       1                    32  34.8317                      0            34.8317              1          1
+ 1       1                   128  13.6118                      0            13.6118              1          1
+ 2       1                   512   7.48565                     0             7.48565             1          1
+ 3       1                  2048   8.42141                     0             8.42141             1          1
+ 4       1                  8192   8.53575                     0             8.53575             1          1
+--------------------------
+
+--------------------------
+
+Using batch sizes per gpu [32, 128, 512, 2048, 8192] for multi gpus...
+--------------------------
+
+--------------------------
+
+[0, 1]
+BatchSize:  64 ... BatchSizePerGpu:  32
+Files already downloaded and verified
+Time creating dataset object:  0.8119403010005044
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 2.1336623399774908, Training Time: 40.734004363002896, Total Time: 42.91437723500076, Loss: 1.5543152130426574, Acc: 0.433
+
+BatchSize:  256 ... BatchSizePerGpu:  128
+Files already downloaded and verified
+Time creating dataset object:  0.8085373120002259
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 4.813121818002401, Training Time: 16.71858740400603, Total Time: 21.574388061999343, Loss: 1.5200254281765313, Acc: 0.45342
+
+BatchSize:  1024 ... BatchSizePerGpu:  512
+Files already downloaded and verified
+Time creating dataset object:  0.82301248100066
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 10.706558536003286, Training Time: 6.508906726001442, Total Time: 17.262895054999717, Loss: 1.8117631649971009, Acc: 0.32204
+
+BatchSize:  4096 ... BatchSizePerGpu:  2048
+Files already downloaded and verified
+Time creating dataset object:  0.8194058010003573
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 13.30987488700157, Training Time: 5.36213102200054, Total Time: 18.721632980000322, Loss: 2.216258372579302, Acc: 0.2116
+
+BatchSize:  16384 ... BatchSizePerGpu:  8192
+Files already downloaded and verified
+Time creating dataset object:  0.8099856529997851
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 14.726004187999024, Training Time: 4.585209001001203, Total Time: 19.381092460000218, Loss: 3.3675725936889647, Acc: 0.1927
+
+      gpus    batch_size_per_gpu      time    communication_time    computation_time    efficiency    speedup
+--  ------  --------------------  --------  --------------------  ------------------  ------------  ---------
+ 0       2                    32  40.734               7.55078              33.1832       0.855101    1.7102
+ 1       2                   128  16.7186              3.06297              13.6556       0.814172    1.62834
+ 2       2                   512   6.50891             1.07336               5.43554      1.15006     2.30012
+ 3       2                  2048   5.36213             0.191641              5.17049      1.57053     3.14107
+ 4       2                  8192   4.58521             0.0490087             4.5362       1.86158     3.72317
+--------------------------
+
+--------------------------
+
+[0, 1, 2, 3]
+BatchSize:  128 ... BatchSizePerGpu:  32
+Files already downloaded and verified
+Time creating dataset object:  0.8074509420002869
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 1.6945580059918939, Training Time: 36.714518470002076, Total Time: 38.46976262299995, Loss: 1.4928022729499, Acc: 0.45358
+
+BatchSize:  512 ... BatchSizePerGpu:  128
+Files already downloaded and verified
+Time creating dataset object:  0.8194448160002139
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 6.659926641996208, Training Time: 13.642993564006247, Total Time: 20.363642063999578, Loss: 1.6010083586278587, Acc: 0.42052
+
+BatchSize:  2048 ... BatchSizePerGpu:  512
+Files already downloaded and verified
+Time creating dataset object:  0.8075177800001256
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 12.052432264001254, Training Time: 4.89056226699995, Total Time: 17.006327430000965, Loss: 2.14073639191114, Acc: 0.26342
+
+BatchSize:  8192 ... BatchSizePerGpu:  2048
+Files already downloaded and verified
+Time creating dataset object:  0.8095463570007269
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 15.221199078998325, Training Time: 3.3645555860020977, Total Time: 18.657826708000357, Loss: 4.134121865034103, Acc: 0.2045
+
+BatchSize:  32768 ... BatchSizePerGpu:  8192
+Files already downloaded and verified
+Time creating dataset object:  0.8551490869995177
+Epoch: 1 of 2
+Epoch: 2 of 2
+Epoch 2 Metrics:
+Epoch 2 DataLoader Time: 16.958676530000957, Training Time: 2.5844355230001383, Total Time: 19.65459632999955, Loss: 1.5744612216949463, Acc: 0.2209
+
+      gpus    batch_size_per_gpu      time    communication_time    computation_time    efficiency    speedup
+--  ------  --------------------  --------  --------------------  ------------------  ------------  ---------
+ 0       4                    32  36.7145              7.36188              29.3526       0.948717    3.79487
+ 1       4                   128  13.643               3.0388               10.6042       0.997714    3.99086
+ 2       4                   512   4.89056             0.884288              4.00627      1.53063     6.12253
+ 3       4                  2048   3.36456             0.233654              3.1309       2.50298    10.0119
+ 4       4                  8192   2.58444             0.0287559             2.55568      3.30275    13.211
+--------------------------
+
+--------------------------
+
+Files already downloaded and verified
+Time creating dataset object:  0.8148511990002589
+Epoch: 1 of 5
+Epoch: 2 of 5
+Epoch: 3 of 5
+Epoch: 4 of 5
+Epoch: 5 of 5
+Large Batch Training Results:
+   gpus  batch_size_per_gpu  total_batch_size  ...      time  accuracy      loss
+0     4                8192             32768  ...  2.603948   0.22156  2.644841
+
+[1 rows x 7 columns]
+--------------------------
+
+--------------------------
+
+Scaling learning rate by:  256.0
+Using scaled learning rate:  25.6
+Using warmup epochs:  3
+Files already downloaded and verified
+Time creating dataset object:  0.816475702000389
+Adjusting learning rate of group 0 to 8.5333e+00.
+Epoch: 1 of 5
+Adjusting learning rate of group 0 to 1.4222e+01.
+Epoch: 2 of 5
+Adjusting learning rate of group 0 to 1.9911e+01.
+Epoch: 3 of 5
+Adjusting learning rate of group 0 to 2.5600e+01.
+Epoch: 4 of 5
+Adjusting learning rate of group 0 to 2.5600e+01.
+Epoch: 5 of 5
+Adjusting learning rate of group 0 to 2.5600e+01.
+Large Batch Training with Warmup and Linearly Scaled Learning Rate Results:
+   gpus  batch_size_per_gpu  total_batch_size  ...      time  accuracy         loss
+0     4                8192             32768  ...  2.552468    0.0974  9075.604248
+
+[1 rows x 9 columns]
+--------------------------
+
+--------------------------
+
