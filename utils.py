@@ -1,6 +1,4 @@
 
-
-
 class TrainingArgs:
     def __init__(self, devices, datapath, workers, learning_rate, momentum, epochs, batch_size, warmup_epochs):
         self.devices = devices

@@ -131,6 +131,11 @@ def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWi
     loss_func = nn.CrossEntropyLoss()
     optimizer = optim.SGD(nn_model.parameters(), lr=args.learning_rate,
                           momentum=args.momentum, weight_decay=5e-4)
+    lr_scheduler = None
+    if args.warmup_epochs:
+        lr_scheduler = optim.lr_scheduler.LinearLR(optimizer, start_factor=1/3,
+                                                   total_iters=args.warmup_epochs,
+                                                   verbose=True)
     
     training_metrics = TrainingMetrics(args)
     training_metrics.dataset_init_time = dataset_init_elapsed
@@ -146,6 +151,8 @@ def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWi
         epoch_metrics = train(nn_model, optimizer, loss_func, train_dataloader, device)
         epoch_metrics.epoch = epoch+1
         training_metrics.add_epoch_metrics(epoch_metrics)
+        if lr_scheduler:
+            lr_scheduler.step()
 
     return training_metrics, nn_model
 
@@ -245,14 +252,14 @@ def train_batch_size_with_remedies(batch_size_per_gpu:int, devices:list, epochs:
     args.learning_rate *= learning_rate_scale
 
     # remedy 2 - warm up
-    #
-    #
+    args.warmup_epochs = 3
     
-    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'learning_rate', 'time', 'accuracy', 'loss']
+    headers = ['gpus', 'batch_size_per_gpu', 'epoch', 'warmup_epochs', 'learning_rate', 'time', 'accuracy', 'loss']
     training_metrics, _ = simple_training(args)
     epoch:EpochMetrics = training_metrics.epoch_metrics[-1]
     epoch_table = [
-        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1, args.learning_rate, epoch.training_time,epoch.acc, epoch.loss)
+        (len(args.devices), batch_size_per_gpu, len(training_metrics.epoch_metrics)+1,
+         args.warmup_epochs, args.learning_rate, epoch.training_time,epoch.acc, epoch.loss)
     ]
     return pd.DataFrame(epoch_table, columns=headers)
 
@@ -314,6 +321,13 @@ def main():
         print(large_batch_training)
         print('--------------------------\n')
         print('--------------------------\n')
+
+        train_batch_size_with_remedies(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
+        print('Large Batch Training with Warmup and Linearly Scaled Learning Rate Results:')
+        print(large_batch_training)
+        print('--------------------------\n')
+        print('--------------------------\n')
+
 
     else:
         print(f'Running Ad Hoc Training...')
