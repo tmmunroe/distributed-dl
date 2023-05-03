@@ -329,13 +329,17 @@ def main():
 
         large_batch_training = train_batch_size_simple(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
         print('Large Batch Training Results:')
-        print(large_batch_training)
+        keep_cols = ['gpus', 'batch_size_per_gpu', 'total_batch_size', 'epoch', 
+                    'time', 'accuracy', 'loss']
+        print(tabulate(large_batch_training[keep_cols], headers=keep_cols))
         print('--------------------------\n')
         print('--------------------------\n')
 
         remedies_training = train_batch_size_with_remedies(batch_size_per_gpu=max_batch_size_per_gpu, devices=[0, 1, 2, 3], epochs=5)
         print('Large Batch Training with Warmup and Linearly Scaled Learning Rate Results:')
-        print(remedies_training)
+        keep_cols = ['gpus', 'batch_size_per_gpu', 'total_batch_size', 'epoch',
+                    'warmup_epochs', 'learning_rate', 'time', 'accuracy', 'loss']
+        print(tabulate(remedies_training[keep_cols], headers=keep_cols))
         print('--------------------------\n')
         print('--------------------------\n')
 
