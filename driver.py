@@ -34,7 +34,6 @@ def default_training_args():
         warmup_epochs=None
     )
 
-
 def train(nn_model, optimizer, loss_func, dataloader, device, print_batch_values=False) -> EpochMetrics:
     train_loss = 0
     correct = 0
@@ -63,6 +62,7 @@ def train(nn_model, optimizer, loss_func, dataloader, device, print_batch_values
 
         # TRAINING BLOCK
         training_start = time.perf_counter()
+        # print(type(inputs[0]), inputs[0], type(inputs[0]), inputs[0].dtype)
         inputs, targets = inputs.to(device), targets.to(device)
         if device.type == 'cuda': torch.cuda.synchronize()
 
@@ -96,6 +96,11 @@ def train(nn_model, optimizer, loss_func, dataloader, device, print_batch_values
 
     return EpochMetrics(dataloading_time, training_time, total_time, train_loss/(batch+1), correct/total)
 
+def dataset_size_in_bytes(args: TrainingArgs):
+    training_data = datasets.CIFAR10(root=args.datapath, train=True, download=True)
+    image_dim = 3*32*32
+    float_size_bytes = 4
+    return len(training_data)*image_dim*float_size_bytes
 
 def simple_training(args: TrainingArgs) -> Tuple[TrainingMetrics, DataParallelWithMetrics]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -289,6 +294,8 @@ def main():
     args = parser.parse_args()
 
     if args.experiments:
+        nbytes_training = dataset_size_in_bytes(args)
+        print('Training Data Bytes: ', nbytes_training)
         batch_sizes_per_gpu = None
         one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=batch_sizes_per_gpu)
         one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
@@ -324,6 +331,28 @@ def main():
         # print(four_gpu_results)
         print('--------------------------\n')
         print('--------------------------\n')
+
+        gpus = 2
+        bandwidth_bytes = nbytes_training * 2 * (gpus-1) / gpus
+        two_gpu_results['total_gb'] =  bandwidth_bytes * 1e-9
+        two_gpu_results['bandwidth_utilization_gb_sec'] =  two_gpu_results['total_gb'] / two_gpu_results['time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb,bandwidth_utilization_gb_sec'.split(',')
+        print(tabulate(two_gpu_results[keep_cols], headers=keep_cols))
+        
+        print('--------------------------\n')
+        print('--------------------------\n')
+
+        gpus = 4
+        bandwidth_bytes = nbytes_training * 2 * (gpus-1) / gpus
+        four_gpu_results['total_gb'] =  bandwidth_bytes * 1e-9
+        four_gpu_results['bandwidth_utilization_gb_sec'] =  four_gpu_results['total_gb'] / four_gpu_results['time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb,bandwidth_utilization_gb_sec'.split(',')
+        print(tabulate(four_gpu_results[keep_cols], headers=keep_cols))
+
+
+        print('--------------------------\n')
+        print('--------------------------\n')
+
 
         max_batch_size_per_gpu = max(batch_sizes_per_gpu)
 

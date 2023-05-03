@@ -5,6 +5,8 @@ from torch.nn import DataParallel
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from torch.nn.parallel.replicate import replicate
 from torch.nn.parallel.parallel_apply import parallel_apply
+import warnings
+
 
 class DataParallelMetrics:
     def __init__(self):
