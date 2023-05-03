@@ -293,9 +293,8 @@ def main():
         one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=batch_sizes_per_gpu)
         one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         one_gpu_results['computation_time'] = one_gpu_results['time'] - one_gpu_results['communication_time']
-        one_gpu_results['efficiency'] = 1.0
         one_gpu_results['speedup'] = 1.0
-        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
         print(tabulate(one_gpu_results[keep_cols], headers=keep_cols))
         # print(one_gpu_results)
         print('--------------------------\n')
@@ -309,9 +308,8 @@ def main():
         two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
         two_gpu_results['communication_time'] = two_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         two_gpu_results['computation_time'] = two_gpu_results['time'] - two_gpu_results['communication_time']
-        two_gpu_results['efficiency'] = one_gpu_results['time'] / two_gpu_results['time']
-        two_gpu_results['speedup'] = two_gpu_results["gpus"]*two_gpu_results['efficiency']
-        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        two_gpu_results['speedup'] = one_gpu_results['time'] / two_gpu_results['time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
         print(tabulate(two_gpu_results[keep_cols], headers=keep_cols))
         # print(two_gpu_results)
         print('--------------------------\n')
@@ -320,9 +318,8 @@ def main():
         four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
         four_gpu_results['communication_time'] = four_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
         four_gpu_results['computation_time'] = four_gpu_results['time'] - four_gpu_results['communication_time']
-        four_gpu_results['efficiency'] = one_gpu_results['time'] / four_gpu_results['time']
-        four_gpu_results['speedup'] = four_gpu_results["gpus"]*four_gpu_results['efficiency']
-        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,efficiency,speedup'.split(',')
+        four_gpu_results['speedup'] = one_gpu_results['time'] / four_gpu_results['time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
         print(tabulate(four_gpu_results[keep_cols], headers=keep_cols))
         # print(four_gpu_results)
         print('--------------------------\n')
