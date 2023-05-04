@@ -298,7 +298,8 @@ def main():
         print('Training Data Bytes: ', nbytes_training)
         batch_sizes_per_gpu = None
         one_gpu_results = increasing_batch_size(devices=[0], batch_sizes_per_gpu=batch_sizes_per_gpu)
-        one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
+        # one_gpu_results['communication_time'] = one_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
+        one_gpu_results['communication_time'] = 0
         one_gpu_results['computation_time'] = one_gpu_results['time'] - one_gpu_results['communication_time']
         one_gpu_results['speedup'] = 1.0
         keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
@@ -313,8 +314,8 @@ def main():
         print('--------------------------\n')
 
         two_gpu_results = increasing_batch_size(devices=[0, 1], batch_sizes_per_gpu=batch_sizes_per_gpu)
-        two_gpu_results['communication_time'] = two_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
-        two_gpu_results['computation_time'] = two_gpu_results['time'] - two_gpu_results['communication_time']
+        two_gpu_results['computation_time'] = one_gpu_results['time'] / 2 # assume perfect scaling
+        two_gpu_results['communication_time'] = two_gpu_results['time'] - two_gpu_results['computation_time']
         two_gpu_results['speedup'] = one_gpu_results['time'] / two_gpu_results['time']
         keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
         print(tabulate(two_gpu_results[keep_cols], headers=keep_cols))
@@ -323,8 +324,8 @@ def main():
         print('--------------------------\n')
 
         four_gpu_results = increasing_batch_size(devices=[0, 1, 2, 3], batch_sizes_per_gpu=batch_sizes_per_gpu)
-        four_gpu_results['communication_time'] = four_gpu_results[['replicate', 'scatter', 'gather']].sum(axis=1)
-        four_gpu_results['computation_time'] = four_gpu_results['time'] - four_gpu_results['communication_time']
+        four_gpu_results['computation_time'] = one_gpu_results['time'] / 4 # assume perfect scaling
+        four_gpu_results['communication_time'] = four_gpu_results['time'] - four_gpu_results['computation_time']
         four_gpu_results['speedup'] = one_gpu_results['time'] / four_gpu_results['time']
         keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,computation_time,speedup'.split(',')
         print(tabulate(four_gpu_results[keep_cols], headers=keep_cols))
@@ -335,8 +336,9 @@ def main():
         gpus = 2
         bandwidth_bytes = nbytes_training * 2 * (gpus-1) / gpus
         two_gpu_results['total_gb_comm'] =  bandwidth_bytes * 1e-9
-        two_gpu_results['bandwidth_utilization_gb_sec'] =  two_gpu_results['total_gb_comm'] / two_gpu_results['time']
-        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb_comm,bandwidth_utilization_gb_sec'.split(',')
+        two_gpu_results['bandwidth_utilization_amort'] =  two_gpu_results['total_gb_comm'] / two_gpu_results['time']
+        two_gpu_results['bandwidth_utilization_comm'] =  two_gpu_results['total_gb_comm'] / two_gpu_results['communication_time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb_comm,bandwidth_utilization_amort,bandwidth_utilization_comm'.split(',')
         print(tabulate(two_gpu_results[keep_cols], headers=keep_cols))
 
         print('--------------------------\n')
@@ -345,8 +347,9 @@ def main():
         gpus = 4
         bandwidth_bytes = nbytes_training * 2 * (gpus-1) / gpus
         four_gpu_results['total_gb_comm'] =  bandwidth_bytes * 1e-9
-        four_gpu_results['bandwidth_utilization_gb_sec'] =  four_gpu_results['total_gb_comm'] / four_gpu_results['time']
-        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb_comm,bandwidth_utilization_gb_sec'.split(',')
+        four_gpu_results['bandwidth_utilization_amort'] =  four_gpu_results['total_gb_comm'] / four_gpu_results['time']
+        four_gpu_results['bandwidth_utilization_comm'] =  four_gpu_results['total_gb_comm'] / four_gpu_results['communication_time']
+        keep_cols = 'gpus,batch_size_per_gpu,time,communication_time,total_gb_comm,bandwidth_utilization_amort,bandwidth_utilization_comm'.split(',')
         print(tabulate(four_gpu_results[keep_cols], headers=keep_cols))
 
 
